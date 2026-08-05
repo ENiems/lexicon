@@ -1,0 +1,17 @@
+﻿[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+bin/
+obj/
+.vs/
+*.user
+*.suo
+*.obj
+*.exe
+*.pdb
+*.ilk
+*.ipch
+*.log
+*.tlog
+.vscode/

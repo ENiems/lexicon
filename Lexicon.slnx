@@ -1,0 +1,7 @@
+<Solution>
+  <Configurations>
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Project Path="Lexicon/Lexicon.vcxproj" Id="2b2017fa-f762-4995-b386-a1c215c2bb6f" />
+</Solution>
