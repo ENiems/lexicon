@@ -19,7 +19,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR, int) {
     wc.lpszClassName = kClassName;
     RegisterClassEx(&wc);
     HWND hwnd = CreateWindowEx(
-        0,
+        WS_EX_TOPMOST,
         kClassName,
         L"Lexicon",
         WS_OVERLAPPEDWINDOW,
