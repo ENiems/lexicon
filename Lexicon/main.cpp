@@ -1,5 +1,7 @@
 #include <windows.h>
 
+HWND overlayHwnd = nullptr;
+
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
     switch (msg) {
     case WM_DESTROY:
@@ -8,8 +10,9 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 	case WM_COMMAND:
 		switch (LOWORD(wParam)) {
 			case 1:
-				MessageBox(hwnd, L"Select Region", L"Info", MB_OK);
-				break;
+				ShowWindow(overlayHwnd, SW_SHOW);
+				SetForegroundWindow(overlayHwnd);
+                break;
 			case 2:
 				MessageBox(hwnd, L"Translation Paused", L"Info", MB_OK);
 				break;
@@ -20,6 +23,14 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 		return 0;
     }
     return DefWindowProc(hwnd, msg, wParam, lParam);
+}
+LRESULT CALLBACK OverlayWindowProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
+	switch (msg) {
+	case WM_DESTROY:
+		PostQuitMessage(0);
+		return 0;
+	}
+	return DefWindowProc(hwnd, msg, wParam, lParam);
 }
 
 int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR, int) {
@@ -72,7 +83,27 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR, int) {
         hInstance,
         nullptr
     );
+	const wchar_t kOverlayClassName[] = L"LexiconOverlayWindow";
+	WNDCLASSEX overlayWc = {};
+	overlayWc.cbSize = sizeof(WNDCLASSEX);
+	overlayWc.lpfnWndProc = OverlayWindowProc;
+	overlayWc.hInstance = hInstance;
+	overlayWc.lpszClassName = kOverlayClassName;
+    overlayWc.hbrBackground = CreateSolidBrush(RGB(0, 0, 0));
+	RegisterClassEx(&overlayWc);
+    overlayHwnd = CreateWindowEx(
+		WS_EX_LAYERED | WS_EX_TOOLWINDOW | WS_EX_TOPMOST,
+		kOverlayClassName,
+		L"Overlay",
+		WS_POPUP,
+		0, 0, GetSystemMetrics(SM_CXSCREEN), GetSystemMetrics(SM_CYSCREEN),
+        nullptr,
+        nullptr,
+        hInstance,
+        nullptr
+    );
     SetLayeredWindowAttributes(hwnd, RGB(0, 192, 255), 200, LWA_ALPHA);
+	SetLayeredWindowAttributes(overlayHwnd, 0, 90, LWA_ALPHA);
     ShowWindow(hwnd, SW_SHOW);
     MSG msg = {};
     while (GetMessage(&msg, nullptr, 0, 0)) {
