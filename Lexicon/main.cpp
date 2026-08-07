@@ -1,6 +1,13 @@
 #include <windows.h>
+#include <windowsx.h>
+#include <wchar.h>
 
 HWND overlayHwnd = nullptr;
+bool drag = false;
+POINT startPoint = {};
+POINT endPoint = {};
+POINT startRegion = {};
+POINT endRegion = {};
 
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
     switch (msg) {
@@ -28,6 +35,50 @@ LRESULT CALLBACK OverlayWindowProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lP
 	switch (msg) {
 	case WM_DESTROY:
 		PostQuitMessage(0);
+		return 0;
+	case WM_LBUTTONDOWN:
+		drag = true;
+		startPoint.x = GET_X_LPARAM(lParam);
+		startPoint.y = GET_Y_LPARAM(lParam);
+		endPoint.x = GET_X_LPARAM(lParam);
+		endPoint.y = GET_Y_LPARAM(lParam);
+		return 0;
+	case WM_MOUSEMOVE:
+		if (drag) {
+			HDC hdc = GetDC(hwnd);
+			HPEN pen = CreatePen(PS_SOLID, 2, RGB(255, 0, 0));
+			HGDIOBJ oldPen = SelectObject(hdc, pen);
+			HGDIOBJ oldBrush = SelectObject(hdc, GetStockObject(NULL_BRUSH));
+			int oldROP2 = SetROP2(hdc, R2_NOTXORPEN);
+			Rectangle(hdc, startPoint.x, startPoint.y, endPoint.x, endPoint.y);
+			endPoint.x = GET_X_LPARAM(lParam);
+			endPoint.y = GET_Y_LPARAM(lParam);
+			Rectangle(hdc, startPoint.x, startPoint.y, endPoint.x, endPoint.y);
+			SetROP2(hdc, oldROP2);
+			SelectObject(hdc, oldPen);
+			SelectObject(hdc, oldBrush);
+			DeleteObject(pen);
+			ReleaseDC(hwnd, hdc);
+		}
+		return 0;
+	case WM_LBUTTONUP:
+		if (drag) {
+			HDC hdc = GetDC(hwnd);
+			HPEN pen = CreatePen(PS_SOLID, 2, RGB(255, 0, 0));
+			HGDIOBJ oldPen = SelectObject(hdc, pen);
+			HGDIOBJ oldBrush = SelectObject(hdc, GetStockObject(NULL_BRUSH));
+			int oldROP2 = SetROP2(hdc, R2_NOTXORPEN);
+			Rectangle(hdc, startPoint.x, startPoint.y, endPoint.x, endPoint.y);
+			drag = false;
+			ShowWindow(hwnd, SW_HIDE);
+			startRegion = startPoint;
+			endRegion = endPoint;
+			startPoint = {};
+			endPoint = {};
+			wchar_t buf[128];
+			swprintf_s(buf, L"Region Selected (%ld,%ld) to (%ld,%ld)", startRegion.x, startRegion.y, endRegion.x, endRegion.y);
+			MessageBox(hwnd, buf, L"Info", MB_OK);
+		}
 		return 0;
 	}
 	return DefWindowProc(hwnd, msg, wParam, lParam);
