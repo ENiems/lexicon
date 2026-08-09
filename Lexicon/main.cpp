@@ -1,6 +1,9 @@
 #include <windows.h>
 #include <windowsx.h>
 #include <wchar.h>
+#include <iostream>
+#include <gdiplus.h>
+#include <atlimage.h>
 
 HWND overlayHwnd = nullptr;
 bool drag = false;
@@ -8,6 +11,26 @@ POINT startPoint = {};
 POINT endPoint = {};
 POINT startRegion = {};
 POINT endRegion = {};
+bool showRegion = true;
+
+void bitmapToPng(HBITMAP hBitmap, const wchar_t* path) {
+	CImage image;
+	image.Attach(hBitmap);
+	image.Save(path, Gdiplus::ImageFormatPNG);
+}
+
+HBITMAP CaptureScreenRegion() {
+	int width = endRegion.x - startRegion.x;
+	int height = endRegion.y - startRegion.y;
+	HDC hdcScreen = GetDC(nullptr);
+	HDC hdcMem = CreateCompatibleDC(hdcScreen);
+	HBITMAP hBitmap = CreateCompatibleBitmap(hdcScreen, width, height);
+	SelectObject(hdcMem, hBitmap);
+	BitBlt(hdcMem, 0, 0, width, height, hdcScreen, startRegion.x, startRegion.y, SRCCOPY);
+	DeleteDC(hdcMem);
+	ReleaseDC(nullptr, hdcScreen);
+	return hBitmap;
+}
 
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
     switch (msg) {
@@ -78,6 +101,7 @@ LRESULT CALLBACK OverlayWindowProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lP
 			wchar_t buf[128];
 			swprintf_s(buf, L"Region Selected (%ld,%ld) to (%ld,%ld)", startRegion.x, startRegion.y, endRegion.x, endRegion.y);
 			MessageBox(hwnd, buf, L"Info", MB_OK);
+			bitmapToPng(CaptureScreenRegion(), L"region_capture.png");
 		}
 		return 0;
 	}
