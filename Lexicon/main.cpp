@@ -4,6 +4,14 @@
 #include <iostream>
 #include <gdiplus.h>
 #include <atlimage.h>
+#include <MemoryBuffer.h>
+#include <winrt/base.h>
+#include <winrt/Windows.Foundation.h>
+#include <winrt/Windows.Graphics.Imaging.h>
+using namespace Gdiplus;
+using namespace winrt;
+using namespace winrt::Windows::Graphics::Imaging;
+using namespace winrt::Windows::Foundation;
 
 HWND overlayHwnd = nullptr;
 bool drag = false;
@@ -16,7 +24,34 @@ bool showRegion = true;
 void bitmapToPng(HBITMAP hBitmap, const wchar_t* path) {
 	CImage image;
 	image.Attach(hBitmap);
-	image.Save(path, Gdiplus::ImageFormatPNG);
+	image.Save(path, ImageFormatPNG);
+}
+
+SoftwareBitmap hbitmapToSoftwareBitmap(HBITMAP hBitmap) {
+	BITMAP bmp;
+	GetObject(hBitmap, sizeof(BITMAP), &bmp);
+	int width = bmp.bmWidth;
+	int height = bmp.bmHeight;
+	BITMAPINFOHEADER bi;
+	bi.biSize = sizeof(BITMAPINFOHEADER);
+	bi.biWidth = width;
+	bi.biHeight = -height;
+	bi.biPlanes = 1;
+	bi.biBitCount = 32;
+	bi.biCompression = BI_RGB;
+	std::vector<BYTE> pixels(width * height * 4);
+	HDC hdc = GetDC(nullptr);
+	GetDIBits(hdc, hBitmap, 0, height, pixels.data(), (BITMAPINFO*)&bi, DIB_RGB_COLORS);
+	ReleaseDC(nullptr, hdc);
+	SoftwareBitmap softwareBitmap(BitmapPixelFormat::Bgra8, width, height, BitmapAlphaMode::Premultiplied);
+	BitmapBuffer buffer = softwareBitmap.LockBuffer(BitmapBufferAccessMode::Write);
+	IMemoryBufferReference reference = buffer.CreateReference();
+	auto spByteAccess = reference.as<::Windows::Foundation::IMemoryBufferByteAccess>();
+	BYTE* data = nullptr;
+	UINT32 capacity = 0;
+	spByteAccess->GetBuffer(&data, &capacity);
+	memcpy(data, pixels.data(), pixels.size());
+	return softwareBitmap;
 }
 
 HBITMAP CaptureScreenRegion() {
@@ -109,6 +144,7 @@ LRESULT CALLBACK OverlayWindowProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lP
 }
 
 int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR, int) {
+	init_apartment();
     const wchar_t kClassName[] = L"LexiconWindow";
     WNDCLASSEX wc = {};
     wc.cbSize = sizeof(WNDCLASSEX);
