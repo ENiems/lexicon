@@ -129,14 +129,17 @@ LRESULT CALLBACK OverlayWindowProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lP
 			Rectangle(hdc, startPoint.x, startPoint.y, endPoint.x, endPoint.y);
 			drag = false;
 			ShowWindow(hwnd, SW_HIDE);
-			startRegion = startPoint;
-			endRegion = endPoint;
+			startRegion.x = min(startPoint.x, endPoint.x);
+			startRegion.y = min(startPoint.y, endPoint.y);
+			endRegion.x = max(startPoint.x, endPoint.x);
+			endRegion.y = max(startPoint.y, endPoint.y);
 			startPoint = {};
 			endPoint = {};
 			wchar_t buf[128];
 			swprintf_s(buf, L"Region Selected (%ld,%ld) to (%ld,%ld)", startRegion.x, startRegion.y, endRegion.x, endRegion.y);
 			MessageBox(hwnd, buf, L"Info", MB_OK);
 			bitmapToPng(CaptureScreenRegion(), L"region_capture.png");
+			SoftwareBitmap softwareBitmap = hbitmapToSoftwareBitmap(CaptureScreenRegion());
 		}
 		return 0;
 	}
@@ -145,6 +148,9 @@ LRESULT CALLBACK OverlayWindowProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lP
 
 int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR, int) {
 	init_apartment();
+	ULONG_PTR gdiplusToken;
+	GdiplusStartupInput gdiplusStartupInput;
+	GdiplusStartup(&gdiplusToken, &gdiplusStartupInput, nullptr);
     const wchar_t kClassName[] = L"LexiconWindow";
     WNDCLASSEX wc = {};
     wc.cbSize = sizeof(WNDCLASSEX);
@@ -221,6 +227,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR, int) {
         TranslateMessage(&msg);
         DispatchMessage(&msg);
     }
+	GdiplusShutdown(gdiplusToken);
     return 0;
 }
 
